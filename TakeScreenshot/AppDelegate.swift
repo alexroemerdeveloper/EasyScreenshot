@@ -11,45 +11,65 @@ import SwiftUI
 
 @NSApplicationMain
 class AppDelegate: NSObject, NSApplicationDelegate {
-
-    var window: NSWindow!
-
-
+    
+    var popover: NSPopover!
+    var statusBarItem: NSStatusItem!
+    
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Create the SwiftUI view and set the context as the value for the managedObjectContext environment keyPath.
         // Add `@Environment(\.managedObjectContext)` in the views that will need the context.
+        // Create the SwiftUI view that provides the window contents.
         let contentView = ContentView().environment(\.managedObjectContext, persistentContainer.viewContext)
-
-        // Create the window and set the content view. 
-        window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 480, height: 300),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
-            backing: .buffered, defer: false)
-        window.center()
-        window.setFrameAutosaveName("Main Window")
-        window.contentView = NSHostingView(rootView: contentView)
-        window.makeKeyAndOrderFront(nil)
+        
+        // Create the popover
+        let popover = NSPopover()
+        popover.contentSize = NSSize(width: 0, height: 0)
+        popover.behavior = .transient
+        popover.contentViewController = NSHostingController(rootView: contentView)
+        self.popover = popover
+        
+        // Create the status item
+        self.statusBarItem = NSStatusBar.system.statusItem(withLength: CGFloat(NSStatusItem.variableLength))
+        
+        if let button = self.statusBarItem.button {
+            button.title = "MakeShot"
+            button.action = #selector(togglePopover(_:))
+        }
+        
     }
-
+    
+    // Create the status item
+    @objc func togglePopover(_ sender: AnyObject?) {
+        let desktopURL     = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
+        let displayID      = CGMainDisplayID()
+        guard let imageRef = CGDisplayCreateImage(displayID) else { return }
+        let destinationURL = desktopURL.appendingPathComponent("screenshot\(UUID()).png")
+        let nsImage        = NSImage(cgImage: imageRef, size: NSSize(width: CGFloat(imageRef.width), height: CGFloat(imageRef.height)))
+        
+        if nsImage.pngWrite(to: destinationURL, options: .withoutOverwriting) {
+            print("File saved")
+        }
+    }
+    
     func applicationWillTerminate(_ aNotification: Notification) {
         // Insert code here to tear down your application
     }
-
+    
     // MARK: - Core Data stack
-
+    
     lazy var persistentContainer: NSPersistentContainer = {
         /*
          The persistent container for the application. This implementation
          creates and returns a container, having loaded the store for the
          application to it. This property is optional since there are legitimate
          error conditions that could cause the creation of the store to fail.
-        */
+         */
         let container = NSPersistentContainer(name: "TakeScreenshot")
         container.loadPersistentStores(completionHandler: { (storeDescription, error) in
             if let error = error {
                 // Replace this implementation with code to handle the error appropriately.
                 // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                 
+                
                 /*
                  Typical reasons for an error here include:
                  * The parent directory does not exist, cannot be created, or disallows writing.
@@ -63,13 +83,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         })
         return container
     }()
-
+    
     // MARK: - Core Data Saving and Undo support
-
+    
     @IBAction func saveAction(_ sender: AnyObject?) {
         // Performs the save action for the application, which is to send the save: message to the application's managed object context. Any encountered errors are presented to the user.
         let context = persistentContainer.viewContext
-
+        
         if !context.commitEditing() {
             NSLog("\(NSStringFromClass(type(of: self))) unable to commit editing before saving")
         }
@@ -83,12 +103,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
     }
-
+    
     func windowWillReturnUndoManager(window: NSWindow) -> UndoManager? {
         // Returns the NSUndoManager for the application. In this case, the manager returned is that of the managed object context for the application.
         return persistentContainer.viewContext.undoManager
     }
-
+    
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         // Save changes in the application's managed object context before the application terminates.
         let context = persistentContainer.viewContext
@@ -106,7 +126,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             try context.save()
         } catch {
             let nserror = error as NSError
-
+            
             // Customize this code block to include application-specific recovery steps.
             let result = sender.presentError(nserror)
             if (result) {
@@ -131,6 +151,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // If we got here, it is time to quit.
         return .terminateNow
     }
-
+    
 }
 
+
+
+extension NSImage {
+    var pngData: Data? {
+        guard let tiffRepresentation = tiffRepresentation, let bitmapImage = NSBitmapImageRep(data: tiffRepresentation) else { return nil }
+        return bitmapImage.representation(using: .png, properties: [:])
+    }
+    func pngWrite(to url: URL, options: Data.WritingOptions = .atomic) -> Bool {
+        do {
+            try pngData?.write(to: url, options: options)
+            return true
+        } catch {
+            print(error)
+            return false
+        }
+    }
+}
