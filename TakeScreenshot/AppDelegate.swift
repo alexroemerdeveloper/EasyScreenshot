@@ -47,7 +47,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         
         if event.type == NSEvent.EventType.rightMouseUp {
             NSApp.terminate(self)
-        } else if  event.type == NSEvent.EventType.leftMouseUp {
+        } else if event.type == NSEvent.EventType.leftMouseUp {
             guard let desktopURL     = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first else { return }
             let displayID      = CGMainDisplayID()
             guard let imageRef = CGDisplayCreateImage(displayID) else { return }
