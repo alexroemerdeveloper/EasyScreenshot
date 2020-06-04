@@ -15,6 +15,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var popover: NSPopover!
     var statusBarItem: NSStatusItem!
     
+    
     func applicationDidFinishLaunching(_ aNotification: Notification) {
         // Create the SwiftUI view and set the context as the value for the managedObjectContext environment keyPath.
         // Add `@Environment(\.managedObjectContext)` in the views that will need the context.
@@ -34,21 +35,30 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if let button = self.statusBarItem.button {
             button.title = "📸"
             button.action = #selector(togglePopover(_:))
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
         
     }
-    
+        
     // Create the status item
     @objc func togglePopover(_ sender: AnyObject?) {
-        guard let desktopURL     = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first else { return }
-        let displayID      = CGMainDisplayID()
-        guard let imageRef = CGDisplayCreateImage(displayID) else { return }
-        let destinationURL = desktopURL.appendingPathComponent("screenshot\(UUID()).png")
-        let nsImage        = NSImage(cgImage: imageRef, size: NSSize(width: CGFloat(imageRef.width), height: CGFloat(imageRef.height)))
         
-        if nsImage.pngWrite(to: destinationURL, options: .withoutOverwriting) {
-            print("File saved")
+        let event = NSApp.currentEvent!
+        
+        if event.type == NSEvent.EventType.rightMouseUp {
+            NSApp.terminate(self)
+        } else if  event.type == NSEvent.EventType.leftMouseUp {
+            guard let desktopURL     = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first else { return }
+            let displayID      = CGMainDisplayID()
+            guard let imageRef = CGDisplayCreateImage(displayID) else { return }
+            let destinationURL = desktopURL.appendingPathComponent("screenshot\(UUID()).png")
+            let nsImage        = NSImage(cgImage: imageRef, size: NSSize(width: CGFloat(imageRef.width), height: CGFloat(imageRef.height)))
+            
+            if nsImage.pngWrite(to: destinationURL, options: .withoutOverwriting) {
+                print("File saved")
+            }
         }
+        
     }
     
     func applicationWillTerminate(_ aNotification: Notification) {
