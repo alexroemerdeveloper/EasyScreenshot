@@ -40,7 +40,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // Create the status item
     @objc func togglePopover(_ sender: AnyObject?) {
-        let desktopURL     = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
+        guard let desktopURL     = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first else { return }
         let displayID      = CGMainDisplayID()
         guard let imageRef = CGDisplayCreateImage(displayID) else { return }
         let destinationURL = desktopURL.appendingPathComponent("screenshot\(UUID()).png")
